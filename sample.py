@@ -52,7 +52,15 @@ class sample():
             theta = -np.pi+np.arccos(ctheta)
         elif (theta==np.pi):
             theta = 0
-        return np.asarray([offset,theta])
+        c, s = np.cos(theta), np.sin(theta)
+        R = np.array(((c,-s), (s, c)))
+        reverseX = False
+        reverseY = False
+        if R.dot((np.asarray(self.top_left)-offset))[0]>R.dot((np.asarray(self.bottom_right)-offset))[0]:
+            reverseX = True
+        if R.dot((np.asarray(self.top_left)-offset))[1]<R.dot((np.asarray(self.bottom_right)-offset))[1]:
+            reverseY = True
+        return np.asarray([offset,theta,reverseX,reverseY])
 
     def transform(self,x,params=None,digit=3):
         tparam = self.transParam if params is None else params
@@ -61,6 +69,10 @@ class sample():
         c, s = np.cos(theta), np.sin(theta)
         R = np.array(((c,-s), (s, c)))
         nx = R.dot((np.asarray(x)-offset))
+        if tparam[2]:
+            nx[0] *=-1
+        if tparam[3]:
+            nx[1] *=-1
         return nx
     def reversetransform(self,x,params=None,digit=1):
         tparam = self.transParam if params is None else params
@@ -68,6 +80,10 @@ class sample():
         offset = tparam[0]
         c, s = np.cos(theta), np.sin(theta)
         R = np.array(((c,-s), (s, c)))
+        if tparam[2]:
+            x[0] *=-1
+        if tparam[3]:
+            x[1] *=-1
         nx = np.round(R.dot(np.asarray(x))+offset,digit)
         return nx
     def onclick(self,event):
@@ -112,7 +128,8 @@ class sample():
                 ticks = np.logspace(np.log10(minB),np.log10(maxB),7)
             else:
                 self.norm = mpl.colors.Normalize(vmin=minB,vmax=maxB)
-                ticks = np.linspace(minB,maxB,7)
+                ntick = min(np.floor(10*(maxB-minB)/10**np.floor(np.log10(maxB))),6)+1
+                ticks = np.linspace(minB,maxB,ntick)
             self.scat.set_norm(self.norm)
             lab = ["{:4.1E}".format(i) for i in ticks]
             lab[-1] = '>2E17\n'+lab[-1]
@@ -180,7 +197,7 @@ class sample():
         plt.ylabel('distance (mm)')
         plt.xlabel('distance (mm)')
         self.ax.autoscale()
-        self.fig.subplots_adjust(top=0.9,bottom=0.1,left=0.09,right=0.75)
+        self.fig.subplots_adjust(top=0.9,bottom=0.1,left=0.105,right=0.75)
         self.stats = self.fig.text(0.8,0.5,"Min : %.1E\nMax : %.1E \nMean : %.1E \nStd : %.1E"%(0,0,0,0), bbox=dict(boxstyle="square", fc="w"))
         plasma=copy(plt.get_cmap('plasma'))
         plasma.set_over(color='r', alpha=None)

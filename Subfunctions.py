@@ -9,6 +9,8 @@ import scipy.constants as cst
 import numpy as np
 from scipy.signal import butter, lfilter, freqz,filtfilt
 import ast
+import logging
+logger = logging.getLogger(__name__)
 eV_To_nm = cst.c*cst.h/cst.e*1E9
 
 def butter_lowpass(cutoff, fs, order=5):
@@ -40,10 +42,13 @@ def strToTable(txt):
     c = StringIO(txt)
     return np.loadtxt(c,delimiter='\t',dtype=np.str)
 def Boron(peaks,noise=0,params=np.array([3.5E16,0])):
-    p = np.asarray(peaks)
-    p=p[np.argsort(p[:,0])]
-    return ((p[0]-noise)/(p[1]-noise))[1]*params
-
+    try:
+        p = np.asarray(peaks)
+        p=p[np.argsort(p[:,0])]
+        return ((p[0]-noise)/(p[1]-noise))[1]*params
+    except:
+        logger.error("Can't calculate BORON")
+        return [-1,-1]
 def find_max(data, interval):
     """
         Retourne le maximum compris entre interval[0] interval[1]

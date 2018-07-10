@@ -13,9 +13,9 @@ import logging
 from copy2clipboard import copy2clipboard
 logger = logging.getLogger(__name__)
 
-IBETO = 5.214
-IFETO = 5.272
-
+BETO = 5.214
+FETO = 5.272
+SiCenter = 1.681
 class SpectrumAnalyser():
     
     def __init__(self,spectrum,params=None,peaks=None,noise=None):
@@ -49,23 +49,66 @@ class SpectrumAnalyser():
         if max(self.spectrum[:,0]>10):
 #    on est en nm
             self.spectrum[:,0] = nmFromEV(self.spectrum[:,0])
-        self.noise = np.percentile(self.spectrum[:,1],10)#partial_mean(self.spectrum,[5.5,6])
+        self.noise = np.percentile(self.spectrum[:,1],20)#partial_mean(self.spectrum,[5.5,6])
         fs = len(self.spectrum[:,0])/abs(self.spectrum[:,0][-1]-self.spectrum[:,0][0])
         try:
             self.fspec = lowpass_filter(self.spectrum[:,1],200,fs,order=1)
         except:
             self.fspec = self.spectrum[:,1]
-        if len(self.peaks) < 2:
-            s=np.copy(self.spectrum)
-            s[:,1]=self.fspec
-            autoPeaks=self.find_peaks(s)
-            self.IBETO = autoPeaks[find_nearest(autoPeaks[:,0],IBETO)[0]]
-            self.IFETO = autoPeaks[find_nearest(autoPeaks[:,0],IFETO)[0]]
-            self.edit_peaks(self.IBETO)
-            self.edit_peaks(self.IFETO)
+        mask = (self.spectrum[:,0]>5.18)&(self.spectrum[:,0]<5.30)
+        #initialize default value
+        if np.sum(mask)>1:
+            if len(self.peaks) < 2:
+                r = 100*self.noise/find_max(self.spectrum,[5.18,5.30])[1]
+                s=np.copy(self.spectrum)
+                if r>10:           
+                    s[:,1]=self.fspec
+                autoPeaks=self.find_peaks(s[mask])
+                logger.debug("PEAKS : ")
+                logger.debug(autoPeaks)
+                pBETO = autoPeaks[find_nearest(autoPeaks[:,0],BETO)[0]]
+                pFETO = autoPeaks[find_nearest(autoPeaks[:,0],FETO)[0]]
+                logger.debug(pBETO)
+                logger.debug(pFETO)
+                self.edit_peaks(pBETO)
+                self.edit_peaks(pFETO)
         self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
         return self.Boron
     
+    def find_peaks(self,data):
+        sampleeV = len(data[:,0])/abs(data[:,0][0]-data[:,0][-1]) #sample/ev
+        peaks = signal.find_peaks(data[:,1]/max(data[:,1]),height=1e14/self.params[0],prominence=1e-2,distance=0.04*sampleeV,width=0.008*sampleeV)
+        peaks = data[peaks[0]]
+        if (len(peaks)>1):
+            logger.debug('Peak: step1')
+            return peaks
+        peaks = data[signal.find_peaks(data[:,1]/max(data[:,1]),height=1e14/self.params[0],prominence=1e-2)[0]]
+        if (len(peaks)>1):
+            logger.debug('Peak: step2')
+            return peaks
+        pIBETO = find_max(data,[(BETO+0.02),(BETO-0.02)])
+        pIFETO = find_max(data,[(FETO+0.02),(FETO-0.02)])
+        peaks = np.asarray([pIBETO,pIFETO])
+        if (len(peaks)>1):
+            logger.debug('Peak: step3')
+            return peaks
+        logger.warn("""Can't find any peak""")
+        peaks=np.array([[BETO,-(1e50)/self.params[0]],[FETO,-1e-49]])
+        return peaks
+    def edit_peaks(self,peak):
+        if peak is None:return
+        if len(self.peaks) == 0:
+            self.peaks.append(peak)
+            return
+        else:
+            #on regarde si il y est déja
+            if not(peak[0] in np.asarray(self.peaks)[:,0]):
+                self.peaks.append(peak)
+            if len(self.peaks) > 2:
+                self.peaks.pop(0)
+            self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
+        return
+       
     def plot(self,title="",f=None):
         self.fig = f if not(f is None) else plt.figure()
         self.ax = self.fig.gca() if not(f is None) else self.fig.add_subplot(111)
@@ -75,10 +118,16 @@ class SpectrumAnalyser():
         self.ax.set_yscale('log')
         self.ax.plot(self.spectrum[:,0],self.spectrum[:,1],lw=1,label='CL Spectrum')
         self.ax.plot(self.spectrum[:,0],self.fspec,lw=1,label='Filtered')
-        self.ax.axvline(IBETO,alpha=0.5,c='gray',linestyle='--')
-        self.ax.axvline(IFETO,alpha=0.5,c='gray',linestyle='--')
+        Emax = np.max(self.spectrum[:,0])
+        Emin = np.min(self.spectrum[:,0])
+        if (BETO > Emin)&(BETO < Emax):self.ax.axvline(BETO,alpha=0.5,c='gray',linestyle='--')
+        if (FETO > Emin)&(FETO < Emax):self.ax.axvline(FETO,alpha=0.5,c='gray',linestyle='--')
+        if (SiCenter > Emin)&(SiCenter < Emax):self.ax.axvline(SiCenter,alpha=0.5,c='gray',linestyle='--')
         ypos= np.round(np.sqrt(abs(self.spectrum[:,1].max()*self.spectrum[:,1].min())),2)
-        self.peaksplt, = self.ax.plot(np.asarray(self.peaks)[:,0],np.asarray(self.peaks)[:,1],'+',c='red')
+        try:
+            self.peaksplt, = self.ax.plot(np.asarray(self.peaks)[:,0],np.asarray(self.peaks)[:,1],'+',c='red')
+        except:
+            pass
         self.noiseplt = self.ax.axhline(alpha=0.5,c='gray',linestyle=':')
         self.noiseplt.set_ydata(self.noise)
         self.Density = self.ax.text(5.3,ypos,'[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Boron[0],self.Boron[1]),ha='left')
@@ -86,45 +135,12 @@ class SpectrumAnalyser():
         self.ax.set_title(title)
         self.ax.set_ylabel('CL Intensity (counts)')
         self.ax.set_xlabel('energy (eV)')
-
+        self.ax.autoscale()
         if (f is None):
             self.fig.show()
         self.fig.canvas.draw_idle()
         plt.draw()
-    def find_peaks(self,data):
-        cSpectrum = data[(data[:,0]>5.18)&(data[:,0]<5.30)]
-        sampleeV = len(data[:,0])/abs(data[:,0][0]-data[:,0][-1]) #sample/ev
-        peaks = signal.find_peaks(cSpectrum[:,1]/max(cSpectrum[:,1]),height=1e14/self.params[0],prominence=1e-2,distance=0.04*sampleeV,width=0.008*sampleeV)
-        peaks = cSpectrum[peaks[0]]
-        if (len(peaks)>1):
-            logger.debug('Peak: step1')
-            return peaks
-        peaks = cSpectrum[signal.find_peaks(cSpectrum[:,1]/max(data[:,1]),height=1e14/self.params[0],prominence=1e-2)[0]]
-        if (len(peaks)>1):
-            logger.debug('Peak: step2')
-            return peaks
-        pIBETO = find_max(data,[(IBETO+0.02),(IBETO-0.02)])
-        pIFETO = find_max(data,[(IFETO+0.02),(IFETO-0.02)])
-        peaks = np.asarray([pIBETO,pIFETO])
-        if (len(peaks)>1):
-            logger.debug('Peak: step3')
-            return peaks
-        logger.warn("""Can't find any peak""")
-        peaks=np.array([[IBETO,-(1e50)/self.params[0]],[IFETO,-1e-49]])
-        return peaks
-    def edit_peaks(self,peak):
-        if peak is None:return
-        if len(self.peaks) == 0:
-            self.peaks.append(peak)
-            return
-        else:# len(peaks)>0:
-            #on regarde si il y est déja
-            if not(peak[0] in np.asarray(self.peaks)[:,0]):
-                self.peaks.append(peak)
-            if len(self.peaks) > 2:
-                self.peaks.pop(0)
-            self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
-        return
+        
     def onclick(self,event):
         if (event.button == 1) & (self.shift_is_held):
             test = closest_point([event.xdata,event.ydata],self.peaks,onlyx=True)
