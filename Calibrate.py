@@ -34,8 +34,8 @@ def fit2(data,interval):
     return np.array([popt[0], np.sqrt(pcov[0])])
 
 def calibrate(plot=False,omnes=3.5E16):
-    data = importData('res/Calibration.csv')
-    params = fit2(data,[0,2E17])
+    data = np.loadtxt('res/Calibration.csv')
+    params = fit2(data,[2E15,2E17])
 #    fit2(data,[0,3E17])
     if plot:
 #        fig = plt.Figure()
@@ -44,7 +44,7 @@ def calibrate(plot=False,omnes=3.5E16):
         ax.set_xscale('log')
         ax.plot(data[:,0] ,data[:,1], '.', c='black', markeredgecolor='none')
         x = np.logspace(np.log10(min(data[:,0]))-1,np.log10(max(data[:,0])),20)
-        ax.plot(x,x/params[0],label='Regression [B] =%.1e ' %params[0]+'$\pm$ %.1e'%params[1] +'r')
+        ax.plot(x,x/params[0],label='Regression [B] = (%.1e ' %params[0]+'$\pm$ %.1e)'%params[1] +'r')
         ax.plot(x,x/(omnes),label='Omnes [B]=%.1e' %omnes+'r')
         ax.plot(x,x/(params[0]+1.96*params[1]),c='gray',linestyle='--')
         ax.plot(x,x/(params[0]-1.96*params[1]),c='gray',linestyle='--')
