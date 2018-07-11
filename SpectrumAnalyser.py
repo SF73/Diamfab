@@ -49,7 +49,7 @@ class SpectrumAnalyser():
         if max(self.spectrum[:,0]>10):
 #    on est en nm
             self.spectrum[:,0] = nmFromEV(self.spectrum[:,0])
-        self.noise = np.percentile(self.spectrum[:,1],20)#partial_mean(self.spectrum,[5.5,6])
+        self.noise = np.percentile(self.spectrum[:,1],10)#partial_mean(self.spectrum,[5.5,6])
         fs = len(self.spectrum[:,0])/abs(self.spectrum[:,0][-1]-self.spectrum[:,0][0])
         try:
             self.fspec = lowpass_filter(self.spectrum[:,1],200,fs,order=1)

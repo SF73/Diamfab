@@ -45,7 +45,10 @@ def Boron(peaks,noise=0,params=np.array([3.5E16,0])):
     try:
         p = np.asarray(peaks)
         p=p[np.argsort(p[:,0])]
-        return ((p[0]-noise)/(p[1]-noise))[1]*params
+        r = ((p[0]-noise)/(p[1]-noise))[1]
+        logger.debug("Ratio : %.4f"%r)
+#        logger.info("Boron : %.2e"%(r*params))
+        return r*params
     except:
         logger.error("Can't calculate BORON")
         return [-1,-1]
