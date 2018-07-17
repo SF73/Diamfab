@@ -66,23 +66,22 @@ def report(path,name,samp,substrate,layers):
     
     if len(data)>0:
         tstyle =    [
-        #                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        #                ('GRID', (4, 0), (4, 2), 1, colors.black),
                         ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
                         ('ROWBACKGROUNDS',(0,0),(-1,-1),[colors.lightblue,colors.white])
                     ]
         data.reverse()
-#        layerspict = Image(genLayers(l0=[data[0][0],data[0][1]],l1=[data[1][0],data[1][1]],l2=[data[2][0],data[2][1]]),4*cm,100)
-#        layerspict.hAlign='LEFT'
         layerspict = Image(genLayers2(data),4*cm,100)
         layerspict.hAlign='LEFT'
         Story.append(layerspict)
         data.reverse()
-        data = [['Layer','Thickness','Boron density (cm^-3)']]+ data
+        data = [['Layer','Thickness*','Boron density (cm^-3)**']]+ data
         t = Table(data,style=tstyle)
         Story.append(Spacer(1,-100))
         Story.append(t)
-        Story.append(Spacer(1,30))
+        w, h = t.wrap(0, 0)
+        Story.append(Spacer(1,100-h))
+        Story.append(Paragraph("*\t:Mesured by ellipsometry",styles["BodyText"]))
+        Story.append(Paragraph("**\t:Mesured by cathodoluminescence",styles["BodyText"]))
     
     Story.append(Spacer(1, 12))
     Story.append(Paragraph("Boron Density",styles['Heading2']))
