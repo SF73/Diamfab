@@ -18,21 +18,21 @@ FETO = 5.272
 SiCenter = 1.681
 class SpectrumAnalyser():
     
-    def __init__(self,spectrum,params=None,peaks=None,noise=None):
+    def __init__(self,spectrum,params=None,peaks=None,noise=None,toeV=True):
         self.shift_is_held = False
         self.spectrum = spectrum
         self.params = calibrate(plot=False) if params is None else params
         self.peaks = [] if peaks is None else peaks
         self.Boron = 0
-        self.noise = 0 if noise is None else noise
+        self.noise = [0,0] if noise is None else noise
         self.coords = []
         self.cidclick = None
-        self.analyse()
+        self.analyse(toeV)
         
         
     @classmethod
-    def from_csv(cls,path,params=None):
-        return cls(importData(path),params)
+    def from_csv(cls,path,params=None,toeV=True):
+        return cls(importData(path),params,toeV=toeV)
     
     @classmethod
     def from_array(cls,array):
@@ -45,11 +45,17 @@ class SpectrumAnalyser():
     def as_array(self):
         return np.asarray([self.spectrum,self.params,self.peaks,self.noise])
     
-    def analyse(self):
-        if max(self.spectrum[:,0]>10):
-#    on est en nm
+    def analyse(self,eV=True):
+        if max(self.spectrum[:,0]>10) and eV:
             self.spectrum[:,0] = nmFromEV(self.spectrum[:,0])
-        self.noise = np.percentile(self.spectrum[:,1],10)#partial_mean(self.spectrum,[5.5,6])
+        try:
+            n = self.spectrum[(self.spectrum[:,0]>5.5)&(self.spectrum[:,0]<6.4)][:,1]
+            n.sort()
+            self.noise = [np.median(n),1.96*n[0:-2].std()]
+        except:
+            n=np.sort(self.spectrum[:,1])[:100]
+            self.noise = [n.mean(),1.96*n.std()]
+        logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
         fs = len(self.spectrum[:,0])/abs(self.spectrum[:,0][-1]-self.spectrum[:,0][0])
         try:
             self.fspec = lowpass_filter(self.spectrum[:,1],200,fs,order=1)
@@ -59,7 +65,7 @@ class SpectrumAnalyser():
         #initialize default value
         if np.sum(mask)>1:
             if len(self.peaks) < 2:
-                r = 100*self.noise/find_max(self.spectrum,[5.18,5.30])[1]
+                r = 100*self.noise[0]/find_max(self.spectrum,[5.18,5.30])[1]
                 s=np.copy(self.spectrum)
                 if r>10:           
                     s[:,1]=self.fspec
@@ -129,7 +135,7 @@ class SpectrumAnalyser():
         except:
             pass
         self.noiseplt = self.ax.axhline(alpha=0.5,c='gray',linestyle=':')
-        self.noiseplt.set_ydata(self.noise)
+        self.noiseplt.set_ydata(self.noise[0])
         self.Density = self.ax.text(5.3,ypos,'[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Boron[0],self.Boron[1]),ha='left')
         self.ax.legend(loc='best')
         self.ax.set_title(title)
@@ -142,16 +148,17 @@ class SpectrumAnalyser():
         plt.draw()
         
     def onclick(self,event):
+        #A modifier
         if (event.button == 1) & (self.shift_is_held):
             test = closest_point([event.xdata,event.ydata],self.peaks,onlyx=True)
             self.peaks[test] = [event.xdata,event.ydata]
         if (event.button == 3) & (self.shift_is_held):
             if event.dblclick:
-                self.noise=0
+                self.noise=[0,0]
             else:
-                self.noise = event.ydata
-            self.noiseplt.set_ydata(self.noise)
-            logger.debug('NOISE:%.1f'%self.noise)
+                self.noise = [event.ydata,0]
+            self.noiseplt.set_ydata(self.noise[0])
+            logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
         if (event.button == 1 & event.dblclick & (not self.shift_is_held)):
             self.Density.set_position((event.xdata,event.ydata))
             

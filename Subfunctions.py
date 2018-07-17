@@ -41,17 +41,29 @@ def strToTable(txt):
     from io import StringIO
     c = StringIO(txt)
     return np.loadtxt(c,delimiter='\t',dtype=np.str)
-def Boron(peaks,noise=0,params=np.array([3.5E16,0])):
+def Boron(peaks,noise=[0,0],params=np.array([3.5E16,0])):
+    """
+    peaks tableau de peak [x (eV),y (coup)]
+    noise : [mean,std]
+    param : [best, std]
+    """
     try:
         p = np.asarray(peaks)
         p=p[np.argsort(p[:,0])]
-        r = ((p[0]-noise)/(p[1]-noise))[1]
-        logger.debug("Ratio : %.4f"%r)
+        a,da = params[0],params[1]
+        n,dn = noise[0],noise[1]
+        IBETO = p[0][1]
+        IFETO = p[1][1]
+        r = ((IBETO-n)/(IFETO-n))
+        dr = dn*r/(IFETO-n)
+        incertitude = np.sqrt((a*dr)**2+(da*r)**2)
+        logger.debug("Ratio : %.4f +- %.4f"%(r,dr))
 #        logger.info("Boron : %.2e"%(r*params))
-        return r*params
+        return [r*a,incertitude]
     except:
-        logger.error("Can't calculate BORON")
+        logger.exception("Can't calculate BORON")
         return [-1,-1]
+
 def find_max(data, interval):
     """
         Retourne le maximum compris entre interval[0] interval[1]
