@@ -10,18 +10,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.patches as patches
 from SpectrumAnalyser import SpectrumAnalyser
+from Calibrate import calibrate
 import os
 import io
 import logging
 logger = logging.getLogger(__name__)
 from copy2clipboard import copy2clipboard
 class sample():
-    
-    
-    def __eq__(self, other):
-        if self.__class__ != other.__class__: return False
-        return np.allclose(self.as_array(),other.as_array())
-#        return self.__dict__ == other.__dict__
     
     
     def __init__(self,name="",bl=[0,0],br=[4,0],tl=[4,4],tr=[4,4],c=None,points=[],spectra=[]):
@@ -247,6 +242,11 @@ class sample():
         pos = files['pos']
         _points = files['points'].tolist()
         sp = files['spectra']
+        logger.debug(sp)
+        params = calibrate(0)
+        for spec in sp:
+            spec[1] = params
+        logger.debug(sp)
         _spectra = list(map(lambda x: SpectrumAnalyser.from_array(x),sp))
         try:
             fname=files['name']
