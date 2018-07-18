@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.odr.odrpack as odrpack
 from collections import Counter
+import itertools
 
 def fit(data,interval):
     interval.sort()
@@ -43,6 +44,7 @@ def fit2(data,interval,init):
     return [myoutput.beta[0],myoutput.sd_beta[0]]
 
 def calibrate(plot=False,omnes=3.5E16):
+    markers = itertools.cycle(["o","s",'h','H',"D",'8'])
     data = np.loadtxt('res/Calibration5K',skiprows=1,dtype=np.str)
     method=np.array(list(map(str.upper,data[:,0])))
     methods = list(Counter(map(str.upper, data[:,0])))
@@ -71,7 +73,7 @@ def calibrate(plot=False,omnes=3.5E16):
                 sy = cdata[:,3]
             except:
                 pass
-            ax.errorbar(x, y, xerr=sx, yerr=sy, linestyle='None',marker='.',label=m)
+            ax.errorbar(x, y, xerr=sx, yerr=sy, linestyle='None',marker=next(markers),markersize=5,label=m)
         ax.legend()
         plt.ylabel('r=$\dfrac{I_{BETO}}{I_{FETO}}$')
         plt.xlabel('Boron concentration (cm$^{-3}$)')
