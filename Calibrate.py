@@ -43,9 +43,9 @@ def fit2(data,interval,init):
     myoutput.pprint()
     return [myoutput.beta[0],myoutput.sd_beta[0]]
 
-def calibrate(plot=False,omnes=3.5E16):
+def calibrate(plot=False,temp=5,omnes=3.5E16):
     markers = itertools.cycle(["o","s",'h','H',"D",'8'])
-    data = np.loadtxt('res/Calibration5K',skiprows=1,dtype=np.str)
+    data = np.loadtxt('res/Calibration%sK'%(temp),skiprows=1,dtype=np.str)
     method=np.array(list(map(str.upper,data[:,0])))
     methods = list(Counter(map(str.upper, data[:,0])))
     data = data[:,1:].astype(np.float64)
@@ -57,9 +57,12 @@ def calibrate(plot=False,omnes=3.5E16):
         ax = plt.subplot(111)
         ax.set_yscale('log')
         ax.set_xscale('log')
+#        ax.text(1, 1, 'matplotlib', horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
+#        plt.annotate('Something', xy=(0.05, 0.95), xycoords='figure fraction')
+        ax.set_title('T=%dK'%(temp))
         x = np.logspace(np.log10(min(data[:,0]))-1,np.log10(max(data[:,0])),20)
         ax.plot(x,x/params[0],label='Regression [B] = (%.1e ' %params[0]+'$\pm$ %.1e)'%params[1] +'r')
-        ax.plot(x,x/(omnes),label='Omnes [B]=%.1e' %omnes+'r')
+#        ax.plot(x,x/(omnes),label='Omnes [B]=%.1e' %omnes+'r')
         ax.plot(x,x/(params[0]+params[1]),c='gray',linestyle='--')
         ax.plot(x,x/(params[0]-params[1]),c='gray',linestyle='--')
         for m in methods:
