@@ -49,13 +49,7 @@ class SpectrumAnalyser():
     def analyse(self,eV=True):
         if max(self.spectrum[:,0]>10) and eV:
             self.spectrum[:,0] = nmFromEV(self.spectrum[:,0])
-        try:
-            n = self.spectrum[(self.spectrum[:,0]>5.5)&(self.spectrum[:,0]<6.4)][:,1]
-            n.sort()
-            self.noise = [np.median(n),1.96*n[0:-2].std()]
-        except:
-            n=np.sort(self.spectrum[:,1])[:100]
-            self.noise = [n.mean(),1.96*n.std()]
+        self.get_noise()
         logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
         fs = len(self.spectrum[:,0])/abs(self.spectrum[:,0][-1]-self.spectrum[:,0][0])
         try:
@@ -82,6 +76,16 @@ class SpectrumAnalyser():
         self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
         return self.Boron
     
+    
+    def get_noise(self,limit=[5.5,6.4]):
+        limit.sort()
+        try:
+            n = self.spectrum[(self.spectrum[:,0]>limit[0])&(self.spectrum[:,0]<limit[1])][:,1]
+            n.sort()
+            self.noise = [np.median(n),1.96*n[0:-2].std()]
+        except:
+            n=np.sort(self.spectrum[:,1])[:100]
+            self.noise = [n.mean(),1.96*n.std()]
     def find_peaks(self,data):
         sampleeV = len(data[:,0])/abs(data[:,0][0]-data[:,0][-1]) #sample/ev
         peaks = signal.find_peaks(data[:,1]/max(data[:,1]),height=1e14/self.params[0],prominence=1e-2,distance=0.04*sampleeV,width=0.008*sampleeV)
@@ -149,7 +153,7 @@ class SpectrumAnalyser():
         plt.draw()
         
     def onclick(self,event):
-        
+        #Manually move nearest peak
         if (event.button == 1) & (self.shift_is_held):
             test = closest_point([event.xdata,event.ydata],self.peaks,onlyx=True)
             self.peaks[test] = [event.xdata,event.ydata]
@@ -158,10 +162,16 @@ class SpectrumAnalyser():
             
         #reset noise
         if (event.button == 3) & (self.shift_is_held):
-            if event.dblclick:
-                self.noise=[0,0]
-            else:
-                self.noise = [event.ydata,0]
+            ix, iy = event.xdata, event.ydata
+            self.coords.append([ix, iy])
+            if len(self.coords) == 2:
+                c=np.array(self.coords)
+                self.get_noise(c[:,0])
+                self.coords=[]
+#            if event.dblclick:
+#                self.noise=[0,0]
+#            else:
+#                self.noise = [event.ydata,0]
             self.noiseplt.set_ydata(self.noise[0])
             logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
             
