@@ -17,6 +17,7 @@ from Subfunctions import strToPoint
 from UI.pdfDialog import Ui_pdfDialog
 from UI.pointDialog import Ui_pointDialog
 from UI.sampleDialog import Ui_sampleDialog
+from UI.aboutDialog import Ui_aboutDialog
 from report import report
 import os
 import logging
@@ -129,8 +130,10 @@ class AppForm(QMainWindow):
     def fileQuit(self):
         self.close()
     def about(self):
-        QMessageBox.about(self, "About",
-                          """Shift+LClick : Delete measure point\nIn Spectrum View :\nShift+LClick : Move nearest peak\nShift+RClick : Move noise baseline\nDouble Click : Move boron density label\n© 2018 Sylvain Finot""")
+        dlg = aboutDialog()
+        dlg.exec_()
+#        QMessageBox.about(self, "About",
+#                          """Shift+LClick : Delete measure point\nIn Spectrum View :\nShift+LClick : Move nearest peak\nShift+RClick : Move noise baseline\nDouble Click : Move boron density label\n© 2018 Sylvain Finot""")
     def getPoint(self):
         dlg = pointDialog()
         if (dlg.exec_()==QDialog.Accepted):
@@ -238,6 +241,9 @@ class AppForm(QMainWindow):
                 pass
         else:
             event.ignore()
+
+
+#--------------------Dialog inhenerit--------------------
             
 class pointDialog(QDialog, Ui_pointDialog):
     def __init__(self,parent=None):
@@ -252,7 +258,9 @@ class pointDialog(QDialog, Ui_pointDialog):
         if path:
             self.path=path
             self.pathTxt.setText(path)
-        
+                     
+#--------------------------------------------------------
+            
 class sampleDialog(QDialog, Ui_sampleDialog):
     def __init__(self,parent=None):
         QDialog.__init__(self,parent)
@@ -270,6 +278,8 @@ class sampleDialog(QDialog, Ui_sampleDialog):
         pt = [strToPoint(x) for x in pt]
         return name,pt
     
+#--------------------------------------------------------    
+        
 class pdfDialog(QDialog, Ui_pdfDialog):
     def __init__(self,parent=None):
         QDialog.__init__(self,parent)
@@ -277,7 +287,20 @@ class pdfDialog(QDialog, Ui_pdfDialog):
         
     def getValues(self):
         return self.nameTxt.text(),self.substrateTxt.toPlainText(),self.layersTxt.toPlainText()
+    
+#--------------------------------------------------------  
+        
+class aboutDialog(QDialog, Ui_aboutDialog):
+    def __init__(self,parent=None):
+        QDialog.__init__(self,parent)
+        self.setupUi(self)
+        filename = 'README.md'
+        with open(filename) as f:
+            data = f.read()
+        self.aboutTxt.setPlainText(data)
 
+#--------------------------------------------------------  
+        
 def main():
     logger.info('Start')
     app = QApplication(sys.argv)
