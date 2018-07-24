@@ -159,7 +159,7 @@ class SpectrumAnalyser():
             self.peaks[test] = [event.xdata,event.ydata]
             self.peaksplt.set_ydata(np.asarray(self.peaks)[:,1])
             self.peaksplt.set_xdata(np.asarray(self.peaks)[:,0])
-            self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
+            self.update()
             
         #reset noise
         if (event.button == 3) & (self.shift_is_held):
@@ -170,7 +170,7 @@ class SpectrumAnalyser():
                 self.get_noise(c[:,0])
                 self.noiseplt.set_ydata(self.noise[0])
                 logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
-                self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
+                self.update()
                 self.coords=[]
 #            if event.dblclick:
 #                self.noise=[0,0]
@@ -181,12 +181,14 @@ class SpectrumAnalyser():
         #move label
         if (event.button == 1 & event.dblclick & (not self.shift_is_held)):
             self.Density.set_position((event.xdata,event.ydata))
-            self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
+            self.update()
             
         self.Density.set_text('r=%.4f $\pm$ %.2E\n[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Ratio[0],self.Ratio[1],self.Boron[0],self.Boron[1]))
         self.fig.canvas.draw_idle()
         plt.draw()
     
+    def update(self):
+        self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
     def on_key_press(self, event):
         if event.key == 'shift':
            self.shift_is_held = True

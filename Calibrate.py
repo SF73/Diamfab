@@ -53,8 +53,8 @@ def calibrate(plot=False,temp=5,omnes=3.5E16):
     params = fit2(data,[0,5E17],init=params[0])
     params[1] *= 1.96
     if plot:
-#        fig = plt.Figure()
-        ax = plt.subplot(111)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
         ax.set_yscale('log')
         ax.set_xscale('log')
 #        ax.text(1, 1, 'matplotlib', horizontalalignment='right', verticalalignment='center', transform=ax.transAxes)
@@ -78,6 +78,7 @@ def calibrate(plot=False,temp=5,omnes=3.5E16):
                 pass
             ax.errorbar(x, y, xerr=sx, yerr=sy, linestyle='None',marker=next(markers),markersize=5,label=m)
         ax.legend()
-        plt.ylabel('r=$\dfrac{I_{BETO}}{I_{FETO}}$')
-        plt.xlabel('Boron concentration (cm$^{-3}$)')
+        ax.set_ylabel('r=$\dfrac{I_{BETO}}{I_{FETO}}$')
+        ax.set_xlabel('Boron concentration (cm$^{-3}$)')
+        fig.show()
     return params

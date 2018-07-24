@@ -80,12 +80,9 @@ def genLayers2(ls):
     l = []
     for i in range(len(ls)):
         l.append((ls[i][0],ls[i][1]))
-    ls = np.asarray(l)
+    ls = np.asarray(l,dtype=np.str)
     d = Drawing(4*cm,100)
-    xpos=0#*(width-length-4*cm)/2
-#        layer0 = 40
-#        l1[1] = 40
-#        l2[1]= 100-layer0-l1[1]
+    xpos=0
     ls[:,1] = layersize2(ls[:,1])
     tickness = ls[:,1].astype(np.float32)
     for i in range(len(ls)):
@@ -110,6 +107,7 @@ def genLayers2(ls):
     
 def layersize2(ls):
     for i in range(len(ls)):
+        ls[i]=ls[i].replace('*','')
         if str(ls[i]).endswith("um"):ls[i] = int(ls[i][:-2])*1000
         if str(ls[i]).endswith("nm"):ls[i] = int(ls[i][:-2])
     ls = np.asarray(ls, dtype=np.float32)

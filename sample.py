@@ -19,7 +19,7 @@ from copy2clipboard import copy2clipboard
 class sample():
     
     
-    def __init__(self,name="",bl=[0,0],br=[4,0],tl=[4,4],tr=[4,4],c=None,points=[],spectra=[]):
+    def __init__(self,name="",bl=[0,0],br=[4,0],tl=[4,4],tr=[4,4],c=None,points=[],spectra=[],temp=5):
         self.shift_is_held = False
         self.bottom_left=bl
         self.bottom_right= br
@@ -27,9 +27,13 @@ class sample():
         self.top_right = tr
         self.cut= c
         self.transParam = self.get_transform()
+        self.temp = temp
+        self.params = calibrate(0,temp=self.temp)
         self.points = points
         self.spectra = spectra
         self.name = name
+#-----------------------------------Geometry-----------------------------------
+        
     def get_transform(self):
         size = np.sqrt((self.bottom_left[0]-self.bottom_right[0])**2+(self.bottom_left[1]-self.bottom_right[1])**2)
         offset=np.asarray(self.bottom_left)
@@ -81,6 +85,9 @@ class sample():
             x[1] *=-1
         nx = np.round(R.dot(np.asarray(x))+offset,digit)
         return nx
+    
+#------------------------------------------------------------------------------
+
     def onclick(self,event):
         self.update_sample()
         self.fig.canvas.draw()
@@ -102,6 +109,7 @@ class sample():
         self.annot.set_text(text)
         self.annot.get_bbox_patch().set_facecolor('w')
         self.annot.get_bbox_patch().set_alpha(1)
+        
     def update_sample(self):
         self.name = self.ax.get_title()
         if(len(self.spectra)>0):
@@ -143,19 +151,21 @@ class sample():
                 if (vis):
                     self.annot.set_visible(False)
                     self.fig.canvas.draw_idle()
-
+                    
     def on_key_press(self, event):
         if event.key == 'shift':
            self.shift_is_held = True
         if event.key == 'ctrl+c':
             self.copy2clipboard()
+            
     def copy2clipboard(self):
         copy2clipboard(self.fig)
         logger.info('Copied to clipboard')
+        
     def on_key_release(self, event):
         if event.key == 'shift':
            self.shift_is_held = False
-
+           
     def connect(self):
         self.cidpress = self.fig.canvas.mpl_connect('key_press_event', lambda event: self.on_key_press(event))
         self.cidrelease = self.fig.canvas.mpl_connect('key_release_event',lambda event: self.on_key_release(event))
@@ -163,6 +173,7 @@ class sample():
         self.cidclick = self.fig.canvas.mpl_connect('button_press_event',lambda event: self.onclick(event))
         self.cidenter = self.fig.canvas.mpl_connect("figure_enter_event",lambda event: self.onclick(event))
         self.cidpick = self.fig.canvas.mpl_connect('pick_event',lambda event: self.on_pick(event))
+        
     def disconnect_plot(self):
         if self.cidclick is None:return
         self.fig.canvas.mpl_disconnect(self.cidclick)
@@ -221,7 +232,7 @@ class sample():
         if ((sa is None)&(path is None)):
             logger.error("Not a valid spectrum")
             return
-        sa = SpectrumAnalyser.from_csv(path) if sa is None else sa
+        sa = SpectrumAnalyser.from_csv(path,params=self.params) if sa is None else sa
         if transform == False:
             pt = self.reversetransform(pt,params=self.transParam).tolist()
         if pt is not None:
@@ -234,19 +245,26 @@ class sample():
         pt = np.asarray(self.points)
         sp = np.array(list(map(lambda x: x.as_array(), self.spectra)))
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        np.savez_compressed(path,name=self.name,pos=SamplePosition,points=pt,spectra=sp)
+        np.savez_compressed(path,name=self.name,pos=SamplePosition,points=pt,spectra=sp,temp=self.temp)
 
+    def set_temp(self,temp):
+        self.temp =temp
+        self.params = calibrate(0,temp)
+        for sp in self.spectra:
+            sp.params = self.params
+            sp.update()
     @classmethod
     def load(cls, path):
         files = np.load(path)
         pos = files['pos']
         _points = files['points'].tolist()
         sp = files['spectra']
-        logger.debug(sp)
-        params = calibrate(0)
+        try:
+            params = calibrate(0,files['temp'])
+        except:
+            params = calibrate(0)
         for spec in sp:
             spec[1] = params
-        logger.debug(sp)
         _spectra = list(map(lambda x: SpectrumAnalyser.from_array(x),sp))
         try:
             fname=files['name']
