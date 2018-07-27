@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import matplotlib
-matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'font.size': 12})
 from scipy.optimize import curve_fit
 import logging
 #import csv
@@ -30,14 +30,14 @@ def plot(percent=99):
     maxdepth = []
     energies = []
     for i in range(11):
-        data.append(np.loadtxt("simu\\"+str(10+2*i)+"kev.dat",skiprows=2,delimiter='\t'))
+        data.append(np.loadtxt(str(10+2*i)+"kev.dat",skiprows=2,delimiter='\t'))
         energies.append(10+2*i)
         maxdepth.append(find(data[i],percent))
     
 #    f = plt.figure()
 #    ax = f.add_subplot(211)
 #    bx = f.add_subplot(212,sharex=ax)
-    f ,(ax,bx) = plt.subplots(2,1, gridspec_kw = {'height_ratios':[2, 1]})
+    f ,(ax,bx) = plt.subplots(2,1, gridspec_kw = {'height_ratios':[2,1]})
     ax.get_shared_x_axes().join(ax, bx)
     for i in range(len(data)):
         ax.plot(data[i][:,0],np.cumsum(data[i][:,1]),label=str(energies[i])+'keV')
@@ -71,7 +71,7 @@ def plot(percent=99):
     f.tight_layout()
 #    f.savefig('maxdepth.png',dpi=300)
 
-plot(95)
+plot(99)
 #with open('maxdepth'+str(percent)+'.csv', 'w') as csvfile:
 #    writer = csv.writer(csvfile, delimiter='\t')
 #    for i in range(len(energies)):

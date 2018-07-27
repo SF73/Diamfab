@@ -8,6 +8,7 @@ from Calibrate import calibrate
 from SpectrumAnalyser import SpectrumAnalyser
 from sample import sample
 import time
+import matplotlib.pyplot as plt
 from report import report
 import numpy as np
 
@@ -111,7 +112,38 @@ params = calibrate(plot=False)
 #                tl=[0, 4])
 #sample2.show()
 
-sampleA = sample.load("autosave.npz")
-sampleA.show()
+#sampleA = sample.load("autosave.npz")
+#sampleA.show()
 #sampleB = sample.load("samples\\NDT38.npz")
+
+#sp = SpectrumAnalyser.from_csv("C:/Users/sylvain.finot/Documents/Mesures/07-05-2018/K5/2/Full_14keV_Spot5_2s_0-1mm_200-800nm",toeV=True)
+#sp.plot()
+spKhaled = np.loadtxt("C:/Users/sylvain.finot/Documents/Mesures/07-05-2018/Khaled/1/Full_14keV_Spot5_4s_0-1mm_200-800nm")
+##spK5 = np.loadtxt("C:/Users/sylvain.finot/Documents/Mesures/07-05-2018/K5/2/Full_14keV_Spot5_2s_0-1mm_200-800nm")
+#
+##f ,(ax,bx) = plt.subplots(2,1, gridspec_kw = {'height_ratios':[1, 1]})
+##ax.get_shared_x_axes().join(ax, bx)
+f= plt.figure()
+bx = f.gca()
+##ax.semilogy(1239.8419/spK5[:,0],spK5[:,1])
+bx.semilogy(spKhaled[:,0],spKhaled[:,1],label="14keV_Spot5_4s_0-1mm_200-800nm")
+##ax.set_title("K5")
+#bx.set_title("14594-01-02")
+#bx.axvline(x=230,c='grey',ls='--')
+#bx.axvline(x=251,c='grey',ls='--')
+#bx.text((230+251)/2,260,'1',ha='center')
+#
+##bx.axvline(x=260,c='grey',ls='--')
+##bx.axvline(x=344,c='grey',ls='--')
+##bx.text((260+344)/2,260,'2',ha='center')
+#
+#bx.axvline(x=230*2,c='grey',ls='--')
+#bx.axvline(x=250*2,c='grey',ls='--')
+#bx.text((230+250),260,'1\'',ha='center')
+#
+#bx.axvline(x=230*3,c='grey',ls='--')
+#bx.axvline(x=251*3,c='grey',ls='--')
+#bx.text((230+251)*3/2,260,'1\'\'',ha='center')
+#bx.legend()
+#f.dpi=600
 print("--- %s seconds ---" % (time.clock() - start_time))
