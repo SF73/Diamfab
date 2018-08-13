@@ -30,7 +30,7 @@ def plot(percent=99):
     maxdepth = []
     energies = []
     for i in range(11):
-        data.append(np.loadtxt("simu\\"+str(10+2*i)+"kev.dat",skiprows=2,delimiter='\t'))
+        data.append(np.loadtxt(str(10+2*i)+"kev.dat",skiprows=2,delimiter='\t'))
         energies.append(10+2*i)
         maxdepth.append(find(data[i],percent))
     
@@ -71,7 +71,7 @@ def plot(percent=99):
     f.tight_layout()
 #    f.savefig('maxdepth.png',dpi=300)
 
-plot(95)
+plot(99)
 #with open('maxdepth'+str(percent)+'.csv', 'w') as csvfile:
 #    writer = csv.writer(csvfile, delimiter='\t')
 #    for i in range(len(energies)):
