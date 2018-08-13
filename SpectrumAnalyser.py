@@ -23,7 +23,8 @@ class SpectrumAnalyser():
         self.spectrum = spectrum
         self.params = calibrate(plot=False) if params is None else params
         self.peaks = [] if peaks is None else peaks
-        self.Boron = 0
+        self.Boron = [0,0]
+        self.Ratio = [0,0]
         self.noise = [0,0] if noise is None else noise
         self.coords = []
         self.cidclick = None
@@ -48,13 +49,7 @@ class SpectrumAnalyser():
     def analyse(self,eV=True):
         if max(self.spectrum[:,0]>10) and eV:
             self.spectrum[:,0] = nmFromEV(self.spectrum[:,0])
-        try:
-            n = self.spectrum[(self.spectrum[:,0]>5.5)&(self.spectrum[:,0]<6.4)][:,1]
-            n.sort()
-            self.noise = [np.median(n),1.96*n[0:-2].std()]
-        except:
-            n=np.sort(self.spectrum[:,1])[:100]
-            self.noise = [n.mean(),1.96*n.std()]
+        self.get_noise()
         logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
         fs = len(self.spectrum[:,0])/abs(self.spectrum[:,0][-1]-self.spectrum[:,0][0])
         try:
@@ -78,9 +73,19 @@ class SpectrumAnalyser():
                 logger.debug(pFETO)
                 self.edit_peaks(pBETO)
                 self.edit_peaks(pFETO)
-        self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
+        self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
         return self.Boron
     
+    
+    def get_noise(self,limit=[5.5,6.4]):
+        limit.sort()
+        try:
+            n = self.spectrum[(self.spectrum[:,0]>limit[0])&(self.spectrum[:,0]<limit[1])][:,1]
+            n.sort()
+            self.noise = [np.median(n),1.96*n[0:-2].std()]
+        except:
+            n=np.sort(self.spectrum[:,1])[:100]
+            self.noise = [n.mean(),1.96*n.std()]
     def find_peaks(self,data):
         sampleeV = len(data[:,0])/abs(data[:,0][0]-data[:,0][-1]) #sample/ev
         peaks = signal.find_peaks(data[:,1]/max(data[:,1]),height=1e14/self.params[0],prominence=1e-2,distance=0.04*sampleeV,width=0.008*sampleeV)
@@ -112,7 +117,7 @@ class SpectrumAnalyser():
                 self.peaks.append(peak)
             if len(self.peaks) > 2:
                 self.peaks.pop(0)
-            self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
+            self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
         return
        
     def plot(self,title="",f=None):
@@ -136,7 +141,7 @@ class SpectrumAnalyser():
             pass
         self.noiseplt = self.ax.axhline(alpha=0.5,c='gray',linestyle=':')
         self.noiseplt.set_ydata(self.noise[0])
-        self.Density = self.ax.text(5.3,ypos,'[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Boron[0],self.Boron[1]),ha='left')
+        self.Density = self.ax.text(5.3,ypos,'r=%.4f $\pm$ %.2E\n[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Ratio[0],self.Ratio[1],self.Boron[0],self.Boron[1]),ha='left')
         self.ax.legend(loc='best')
         self.ax.set_title(title)
         self.ax.set_ylabel('CL Intensity (counts)')
@@ -148,28 +153,42 @@ class SpectrumAnalyser():
         plt.draw()
         
     def onclick(self,event):
-        #A modifier
+        #Manually move nearest peak
         if (event.button == 1) & (self.shift_is_held):
             test = closest_point([event.xdata,event.ydata],self.peaks,onlyx=True)
             self.peaks[test] = [event.xdata,event.ydata]
+            self.peaksplt.set_ydata(np.asarray(self.peaks)[:,1])
+            self.peaksplt.set_xdata(np.asarray(self.peaks)[:,0])
+            self.update()
+            
+        #reset noise
         if (event.button == 3) & (self.shift_is_held):
-            if event.dblclick:
-                self.noise=[0,0]
-            else:
-                self.noise = [event.ydata,0]
-            self.noiseplt.set_ydata(self.noise[0])
-            logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
+            ix, iy = event.xdata, event.ydata
+            self.coords.append([ix, iy])
+            if len(self.coords) == 2:
+                c=np.array(self.coords)
+                self.get_noise(c[:,0])
+                self.noiseplt.set_ydata(self.noise[0])
+                logger.debug('NOISE:%.1f +- %.1f'%(self.noise[0],self.noise[1]))
+                self.update()
+                self.coords=[]
+#            if event.dblclick:
+#                self.noise=[0,0]
+#            else:
+#                self.noise = [event.ydata,0]
+            
+            
+        #move label
         if (event.button == 1 & event.dblclick & (not self.shift_is_held)):
             self.Density.set_position((event.xdata,event.ydata))
+            self.update()
             
-        self.Boron = Boron(self.peaks,noise=self.noise,params=self.params)
-        self.peaksplt.set_ydata(np.asarray(self.peaks)[:,1])
-        self.peaksplt.set_xdata(np.asarray(self.peaks)[:,0])
-        self.Density.set_text('[B] = %.1e'%self.Boron[0]+'$\pm$ %.1e'%self.Boron[1])
-        self.Density.set_text('[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Boron[0],self.Boron[1]))
+        self.Density.set_text('r=%.4f $\pm$ %.2E\n[B] = %.1E $\pm$ %.1E cm$^{-3}$'%(self.Ratio[0],self.Ratio[1],self.Boron[0],self.Boron[1]))
         self.fig.canvas.draw_idle()
         plt.draw()
     
+    def update(self):
+        self.Boron, self.Ratio = Boron(self.peaks,noise=self.noise,params=self.params)
     def on_key_press(self, event):
         if event.key == 'shift':
            self.shift_is_held = True

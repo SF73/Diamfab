@@ -17,6 +17,8 @@ from Subfunctions import strToPoint
 from UI.pdfDialog import Ui_pdfDialog
 from UI.pointDialog import Ui_pointDialog
 from UI.sampleDialog import Ui_sampleDialog
+from UI.aboutDialog import Ui_aboutDialog
+from UI.optionsDialog import Ui_optionsDialog
 from report import report
 import os
 import logging
@@ -53,6 +55,7 @@ class AppForm(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.create_main_frame()
         self.params = calibrate(plot=False)
+        self.temp=5
         os.makedirs("temp", exist_ok=True)
         self.restore()
 
@@ -112,10 +115,11 @@ class AppForm(QMainWindow):
         menubar.addMenu(spec_menu)
         spec_menu.addAction('&Open', self.openSpectrum)
         
-        help_menu = QMenu('&Help', self)
+        options_menu = QMenu('&Options', self)
         menubar.addSeparator()
-        menubar.addMenu(help_menu)
-        help_menu.addAction('&About', self.about)
+        menubar.addMenu(options_menu)
+        options_menu.addAction('&Options', self.set_options)
+        options_menu.addAction('&About', self.about)
         
         vbox = QVBoxLayout()
         vbox.addWidget(self.canvas)  # the matplotlib canvas
@@ -129,8 +133,10 @@ class AppForm(QMainWindow):
     def fileQuit(self):
         self.close()
     def about(self):
-        QMessageBox.about(self, "About",
-                          """Shift+LClick : Delete measure point\nIn Spectrum View :\nShift+LClick : Move nearest peak\nShift+RClick : Move noise baseline\nDouble Click : Move boron density label\n© 2018 Sylvain Finot""")
+        dlg = aboutDialog()
+        dlg.exec_()
+#        QMessageBox.about(self, "About",
+#                          """Shift+LClick : Delete measure point\nIn Spectrum View :\nShift+LClick : Move nearest peak\nShift+RClick : Move noise baseline\nDouble Click : Move boron density label\n© 2018 Sylvain Finot""")
     def getPoint(self):
         dlg = pointDialog()
         if (dlg.exec_()==QDialog.Accepted):
@@ -151,6 +157,7 @@ class AppForm(QMainWindow):
                 self.sample.add_point(pt=pt,transform=transform,path=path)
             except Exception as e:
                 logging.exception("Point format invalid")
+                QMessageBox.warning(self,"Error","Point format invalid")
     def load(self):
         path = QFileDialog.getOpenFileName(self, "Open Sample","","(*.npz)")[0]
         if path:
@@ -163,6 +170,7 @@ class AppForm(QMainWindow):
                 self.sample.show(self.fig)
             except Exception as e:
                 logger.exception("Can't load sample")
+                QMessageBox.warning(self,"Error","Can't load sample")
     def keyPressEvent(self, event):
         if ((event.key() == QtCore.Qt.Key_Shift) & (self.sample is not None)):
             self.sample.shift_is_held = True
@@ -187,6 +195,7 @@ class AppForm(QMainWindow):
                 spectrum.plot()
             except Exception as e:
                 logger.exception("Can't open spectrum")
+                QMessageBox.warning(self,"Error","Can't open spectrum")
     def newsample(self):
         try:
             dlg = sampleDialog()
@@ -202,13 +211,21 @@ class AppForm(QMainWindow):
                     br=pt[1],
                     tl=pt[2],
                     tr=pt[3],
-                    c=pt[4])
+                    c=pt[4],temp=self.temp)
                 self.sample.show(self.fig)
         except TypeError:
             logger.exception("Can't create sample : At least one point is invalid")
+            QMessageBox.critical(self,"Error","Can't create sample : At least one point is invalid")
         except Exception as e:
             logger.exception("Can't create sample")
-        
+            QMessageBox.critical(self,"Error","Can't create sample")
+    def set_options(self):
+        dlg = optionsDialog(self)
+        if (dlg.exec_()==QDialog.Accepted):
+            self.temp = dlg.getValues()
+            self.params = calibrate(0,self.temp)
+            if self.sample:
+                self.sample.set_temp(self.temp)
     def export(self):
         if self.sample is None:
             QMessageBox.warning(self,"Error","No open sample")
@@ -221,9 +238,11 @@ class AppForm(QMainWindow):
                 if path:
                     report(path=path,name=name,samp=self.sample,substrate=subs,layers=layers)
         except PermissionError as e:
-            logger.error("Can't export PDF : File is probably open")
+            logger.exception("Can't export PDF : File is probably open")
+            QMessageBox.critical(self,"Error","Can't export PDF : File is probably open")
         except Exception as e:
             logger.exception("Can't export PDF")
+            QMessageBox.critical(self,"Error","Can't export PDF")
             
     def closeEvent(self, event):
         quit_msg = "Are you sure you want to exit the program?"
@@ -238,6 +257,9 @@ class AppForm(QMainWindow):
                 pass
         else:
             event.ignore()
+
+
+#--------------------Dialog inhenerit--------------------
             
 class pointDialog(QDialog, Ui_pointDialog):
     def __init__(self,parent=None):
@@ -252,7 +274,9 @@ class pointDialog(QDialog, Ui_pointDialog):
         if path:
             self.path=path
             self.pathTxt.setText(path)
-        
+                     
+#--------------------------------------------------------
+            
 class sampleDialog(QDialog, Ui_sampleDialog):
     def __init__(self,parent=None):
         QDialog.__init__(self,parent)
@@ -270,6 +294,8 @@ class sampleDialog(QDialog, Ui_sampleDialog):
         pt = [strToPoint(x) for x in pt]
         return name,pt
     
+#--------------------------------------------------------    
+        
 class pdfDialog(QDialog, Ui_pdfDialog):
     def __init__(self,parent=None):
         QDialog.__init__(self,parent)
@@ -277,7 +303,42 @@ class pdfDialog(QDialog, Ui_pdfDialog):
         
     def getValues(self):
         return self.nameTxt.text(),self.substrateTxt.toPlainText(),self.layersTxt.toPlainText()
+    
+#--------------------------------------------------------  
+        
+class aboutDialog(QDialog, Ui_aboutDialog):
+    def __init__(self,parent=None):
+        QDialog.__init__(self,parent)
+        self.setupUi(self)
+        filename = 'README.md'
+        with open(filename) as f:
+            data = f.read()
+        self.aboutTxt.setPlainText(data)
 
+#--------------------------------------------------------
+class optionsDialog(QDialog, Ui_optionsDialog):
+    def __init__(self,parent=None):
+        QDialog.__init__(self,parent)
+        self.setupUi(self)
+        self.calibs = self.get_calibrations()
+        self.tempcomboBox.clear()
+        self.tempcomboBox.addItems(self.calibs)
+        index = self.tempcomboBox.findText('Calibration%sK'%(self.parent().temp), QtCore.Qt.MatchFixedString)
+        if index >= 0:
+            self.tempcomboBox.setCurrentIndex(index)
+        self.pushButton.clicked.connect(self.showcalib)
+        
+    def getValues(self):
+        return int(str(self.tempcomboBox.currentText()).replace('Calibration','')[:-1])
+    def showcalib(self):
+        temp=self.getValues()
+        calibrate(plot=True,temp=temp)
+    def get_calibrations(self):
+        mypath = "res"
+        return [f for f in os.listdir(mypath) if (os.path.isfile(os.path.join(mypath, f)) and str.startswith(f,'Calibration'))]
+        
+#--------------------------------------------------------
+        
 def main():
     logger.info('Start')
     app = QApplication(sys.argv)

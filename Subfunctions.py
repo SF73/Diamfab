@@ -33,8 +33,10 @@ def nmFromEV(E):
         return eV_To_nm/E
     
 def importData(path):
-    content =  np.loadtxt(path, dtype=np.str)
-    content = np.char.replace(content, ',', '.').astype(np.float64)[:,:2]
+#    content =  np.loadtxt(path, delimiter='\t' ,dtype=np.str)
+#    content = np.char.replace(content, ',', '.').astype(np.float64)[:,:2]
+    content = np.genfromtxt(path,delimiter='\t')
+    content = content[~np.isnan(content).any(axis=1)]
     return content
 
 def strToTable(txt):
@@ -57,12 +59,12 @@ def Boron(peaks,noise=[0,0],params=np.array([3.5E16,0])):
         r = ((IBETO-n)/(IFETO-n))
         dr = dn*r/(IFETO-n)
         incertitude = np.sqrt((a*dr)**2+(da*r)**2)
-        logger.debug("Ratio : %.4f +- %.4f"%(r,dr))
+        logger.debug("Ratio : %.2e +- %.2e"%(r,dr))
 #        logger.info("Boron : %.2e"%(r*params))
-        return [r*a,incertitude]
+        return [r*a,incertitude], [r,dr]
     except:
         logger.exception("Can't calculate BORON")
-        return [-1,-1]
+        return [-1,-1],[-1,-1]
 
 def find_max(data, interval):
     """

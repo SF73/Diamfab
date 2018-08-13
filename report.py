@@ -48,6 +48,7 @@ def report(path,name,samp,substrate,layers):
 #            ['Propiété4','Valeur'],
 #            ['Propiété5','Valeur']]
 
+#-----------------------------------Substrat-----------------------------------
     data = strToTable(substrate).tolist()
     if len(data)>0:
         Story.append(Paragraph("Substrate specification :",styles['Heading2']))
@@ -59,10 +60,11 @@ def report(path,name,samp,substrate,layers):
                     ]
         t = Table(data,style=tstyle,colWidths=(width-3*cm)/2)
         Story.append(t)
-
+        
+        
+#------------------------------------Layers------------------------------------
     Story.append(Paragraph("Layers : ",styles['Heading2']))
     data = strToTable(layers).tolist()
-    
     
     if len(data)>0:
         tstyle =    [
@@ -74,17 +76,19 @@ def report(path,name,samp,substrate,layers):
         layerspict.hAlign='LEFT'
         Story.append(layerspict)
         data.reverse()
-        data = [['Layer','Thickness*','Boron density (cm^-3)**']]+ data
+        data = [['Layer','Thickness','Boron density (cm^-3)']]+ data
         t = Table(data,style=tstyle)
         Story.append(Spacer(1,-100))
         Story.append(t)
         w, h = t.wrap(0, 0)
         Story.append(Spacer(1,100-h))
-        Story.append(Paragraph("*\t:Mesured by ellipsometry",styles["BodyText"]))
-        Story.append(Paragraph("**\t:Mesured by cathodoluminescence",styles["BodyText"]))
-    
+        Story.append(Paragraph("* Measured by ellipsometry",styles["BodyText"]))
+#        Story.append(Paragraph("**Measured by cathodoluminescence at %sK"%(samp.temp),styles["BodyText"]))
     Story.append(Spacer(1, 12))
+    
+#-------------------------------------Map-------------------------------------- 
     Story.append(Paragraph("Boron Density",styles['Heading2']))
+    Story.append(Paragraph("Measured by cathodoluminescence at %sK"%(samp.temp),styles["BodyText"]))
     bd = ImageReader(samp.as_Image())
     iw,ih = bd.getSize()
     nw,nh = resize(iw,ih,15*cm)

@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import matplotlib
-matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'font.size': 12})
 from scipy.optimize import curve_fit
 import logging
 #import csv
@@ -37,7 +37,7 @@ def plot(percent=99):
 #    f = plt.figure()
 #    ax = f.add_subplot(211)
 #    bx = f.add_subplot(212,sharex=ax)
-    f ,(ax,bx) = plt.subplots(2,1, gridspec_kw = {'height_ratios':[2, 1]})
+    f ,(ax,bx) = plt.subplots(2,1, gridspec_kw = {'height_ratios':[2,1]})
     ax.get_shared_x_axes().join(ax, bx)
     for i in range(len(data)):
         ax.plot(data[i][:,0],np.cumsum(data[i][:,1]),label=str(energies[i])+'keV')

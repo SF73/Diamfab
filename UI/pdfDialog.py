@@ -61,8 +61,8 @@ class Ui_pdfDialog(object):
 "Type\tIIa\n"
 "Face orientation\t(100)"))
         self.label_3.setText(_translate("pdfDialog", "Layers"))
-        self.layersTxt.setPlainText(_translate("pdfDialog", "p--\t4000nm\t5E20\n"
-"p++\t460nm\t>4E20\n"
+        self.layersTxt.setPlainText(_translate("pdfDialog", "p--\t4000nm*\t5E20\n"
+"p++\t460nm*\t>4E20\n"
 "substrate\t5000nm\t5E20"))
 
 
